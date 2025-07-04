@@ -14,13 +14,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { WorkoutItem } from './components/WorkoutItem';
 import { colors } from './constants/colors';
 import { WORKOUT_LEVELS } from './constants/workouts';
-import { useWorkoutProgress } from './hooks/useWorkoutProgress';
+import { useWorkoutProgressContext } from './context/WorkoutProgressContext';
 import { getNextWorkoutForLevel, formatDuration } from './utils/workoutCalculations';
 
 export default function WorkoutScreen() {
   const router = useRouter();
   const { levelId } = useLocalSearchParams();
-  const { userProgress, completeWorkout } = useWorkoutProgress();
+  const { userProgress, completeWorkout } = useWorkoutProgressContext();
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
   const [isWorkoutStarted, setIsWorkoutStarted] = useState(false);
   const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
@@ -37,48 +37,101 @@ export default function WorkoutScreen() {
   }
 
   const nextWorkout = getNextWorkoutForLevel(currentLevelId, userProgress, currentLevel);
+  
+  console.log('Workout screen data:', {
+    currentLevelId,
+    currentLevel: currentLevel?.name,
+    nextWorkout: nextWorkout?.name,
+    workoutId: nextWorkout?.id,
+    exerciseCount: nextWorkout?.exercises?.length
+  });
+  
+  // Check if this workout is already completed
+  const isWorkoutAlreadyCompleted = userProgress.completedWorkouts.some(
+    workout => workout.levelId === currentLevelId && workout.dayId === nextWorkout.id
+  );
+
+  // Load previously completed exercises for this specific workout (read-only if already completed)
+  useEffect(() => {
+    const existingWorkout = userProgress.completedWorkouts.find(
+      workout => workout.levelId === currentLevelId && workout.dayId === nextWorkout.id
+    );
+    
+    if (existingWorkout) {
+      const previouslyCompletedExercises = existingWorkout.exercises
+        .filter(ex => ex.completed)
+        .map(ex => ex.exerciseId);
+      setCompletedExercises(previouslyCompletedExercises);
+      console.log('Loaded previously completed exercises:', previouslyCompletedExercises);
+    }
+  }, [currentLevelId, nextWorkout.id, userProgress.completedWorkouts]);
 
   const handleExerciseToggle = (exerciseId: string) => {
+    console.log('Exercise toggle called for:', exerciseId);
+    
+    // Prevent toggling if workout is already completed
+    if (isWorkoutAlreadyCompleted) {
+      console.log('Workout already completed - preventing toggle');
+      Alert.alert('Workout Completed', 'This workout has already been completed. You cannot modify it.');
+      return;
+    }
+    
     if (!isWorkoutStarted) {
+      console.log('Starting workout for the first time');
       setIsWorkoutStarted(true);
       setWorkoutStartTime(new Date());
     }
 
     setCompletedExercises(prev => {
+      let newState;
       if (prev.includes(exerciseId)) {
-        return prev.filter(id => id !== exerciseId);
+        newState = prev.filter(id => id !== exerciseId);
+        console.log('Removing exercise from completed list:', exerciseId);
       } else {
-        return [...prev, exerciseId];
+        newState = [...prev, exerciseId];
+        console.log('Adding exercise to completed list:', exerciseId);
       }
+      console.log('New completed exercises state:', newState);
+      return newState;
     });
   };
 
   const handleCompleteWorkout = async () => {
+    console.log('handleCompleteWorkout called - Starting workout completion process');
+    console.log('Completed exercises:', completedExercises);
+    
+    // Prevent completing if already completed
+    if (isWorkoutAlreadyCompleted) {
+      Alert.alert('Already Completed', 'This workout has already been completed.');
+      return;
+    }
+    
     if (completedExercises.length === 0) {
+      console.log('No exercises completed - showing alert');
       Alert.alert('No exercises completed', 'Please complete at least one exercise before finishing.');
       return;
     }
 
     const completionPercentage = (completedExercises.length / nextWorkout.exercises.length) * 100;
+    console.log('Completion percentage:', completionPercentage);
     
-    Alert.alert(
-      'Complete Workout?',
-      `You've completed ${completedExercises.length} out of ${nextWorkout.exercises.length} exercises (${Math.round(completionPercentage)}%).\n\nAre you sure you want to finish this workout?`,
-      [
-        { text: 'Continue Workout', style: 'cancel' },
-        { 
-          text: 'Complete Workout', 
-          onPress: async () => {
-            await completeWorkout(currentLevelId, nextWorkout.id, completedExercises);
-            Alert.alert(
-              'Great job! 🎉',
-              `Workout completed! You finished ${completedExercises.length} exercises.`,
-              [{ text: 'OK', onPress: () => router.back() }]
-            );
-          }
-        }
-      ]
-    );
+    // For web compatibility, let's proceed directly without confirmation alert
+    console.log('Proceeding with workout completion...');
+    console.log('Completing workout:', { levelId: currentLevelId, dayId: nextWorkout.id, exercises: completedExercises });
+    
+    try {
+      console.log('About to call completeWorkout function...');
+      await completeWorkout(currentLevelId, nextWorkout.id, completedExercises);
+      console.log('Workout completed successfully - context updated');
+      
+      // Navigate directly without success alert for now
+      console.log('Navigating to home screen directly...');
+      router.push('/(tabs)');
+      
+    } catch (error) {
+      console.error('Error completing workout:', error);
+      Alert.alert('Error', 'There was an error saving your workout. Please try again.');
+    }
   };
 
   const getLevelColor = (levelId: number) => {
@@ -147,9 +200,19 @@ export default function WorkoutScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.exercisesSection}>
-          <Text style={styles.sectionTitle}>Exercises</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Exercises</Text>
+            {isWorkoutAlreadyCompleted && (
+              <View style={styles.completedBadge}>
+                <Text style={styles.completedBadgeText}>✓ COMPLETED</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.sectionSubtitle}>
-            Tap each exercise when you complete it
+            {isWorkoutAlreadyCompleted 
+              ? "This workout has been completed"
+              : "Tap each exercise when you complete it"
+            }
           </Text>
           
           {nextWorkout.exercises.map((exercise) => (
@@ -158,6 +221,7 @@ export default function WorkoutScreen() {
               exercise={exercise}
               isCompleted={completedExercises.includes(exercise.id)}
               onToggle={() => handleExerciseToggle(exercise.id)}
+              disabled={isWorkoutAlreadyCompleted}
             />
           ))}
         </View>
@@ -170,18 +234,36 @@ export default function WorkoutScreen() {
           </Text>
         </View>
         
-        <TouchableOpacity
-          style={[
-            styles.completeButton,
-            completedExercises.length === 0 && styles.disabledButton
-          ]}
-          onPress={handleCompleteWorkout}
-          disabled={completedExercises.length === 0}
-        >
-          <Text style={styles.completeButtonText}>
-            Complete Workout
-          </Text>
-        </TouchableOpacity>
+        {!isWorkoutAlreadyCompleted && (
+          <TouchableOpacity
+            style={[
+              styles.completeButton,
+              completedExercises.length === 0 && styles.disabledButton
+            ]}
+            onPress={handleCompleteWorkout}
+            disabled={completedExercises.length === 0}
+          >
+            <Text style={styles.completeButtonText}>
+              Complete Workout
+            </Text>
+          </TouchableOpacity>
+        )}
+        
+        {isWorkoutAlreadyCompleted && (
+          <View style={styles.completedWorkoutMessage}>
+            <Text style={styles.completedWorkoutText}>
+              ✓ This workout has been completed!
+            </Text>
+            <TouchableOpacity
+              style={styles.backToHomeButton}
+              onPress={() => router.push('/(tabs)')}
+            >
+              <Text style={styles.backToHomeButtonText}>
+                Back to Home
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -269,11 +351,27 @@ const styles = StyleSheet.create({
   exercisesSection: {
     marginBottom: 100, // Space for bottom section
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    marginBottom: 8,
+  },
+  completedBadge: {
+    backgroundColor: colors.success,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  completedBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: colors.white,
   },
   sectionSubtitle: {
     fontSize: 14,
@@ -315,6 +413,31 @@ const styles = StyleSheet.create({
   completeButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: colors.white,
+  },
+  completedWorkoutMessage: {
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: colors.success + '10',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.success + '30',
+  },
+  completedWorkoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.success,
+    marginBottom: 12,
+  },
+  backToHomeButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  backToHomeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.white,
   },
 });

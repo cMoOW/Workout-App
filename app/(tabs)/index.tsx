@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -6,7 +6,7 @@ import { LevelCard } from '../components/LevelCard';
 import { ProgressCircle } from '../components/ProgressCircle';
 import { colors } from '../constants/colors';
 import { WORKOUT_LEVELS } from '../constants/workouts';
-import { useWorkoutProgress } from '../hooks/useWorkoutProgress';
+import { useWorkoutProgressContext } from '../context/WorkoutProgressContext';
 import { 
   calculateLevelProgress, 
   calculateOverallProgress, 
@@ -16,7 +16,18 @@ import {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { userProgress, loading } = useWorkoutProgress();
+  const { userProgress, loading } = useWorkoutProgressContext();
+
+  // Debug: Log when userProgress changes
+  useEffect(() => {
+    console.log('Home screen - userProgress updated:', userProgress);
+  }, [userProgress]);
+
+  // Also listen for changes in completed workouts
+  useEffect(() => {
+    console.log('Home screen - Workouts completed count:', userProgress.totalWorkoutsCompleted);
+    console.log('Home screen - Current level:', userProgress.currentLevel);
+  }, [userProgress.totalWorkoutsCompleted, userProgress.currentLevel]);
 
   if (loading) {
     return (
@@ -29,6 +40,13 @@ export default function HomeScreen() {
   }
 
   const overallProgress = calculateOverallProgress(userProgress, WORKOUT_LEVELS);
+
+  console.log('Home screen render:', {
+    totalWorkouts: userProgress.totalWorkoutsCompleted,
+    currentLevel: userProgress.currentLevel,
+    completedWorkouts: userProgress.completedWorkouts.length,
+    overallProgress
+  });
 
   const handleLevelPress = (levelId: number) => {
     if (isLevelUnlocked(levelId, userProgress, WORKOUT_LEVELS)) {

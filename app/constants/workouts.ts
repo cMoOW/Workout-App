@@ -137,7 +137,7 @@ export const WORKOUT_LEVELS: Level[] = [
     id: 1,
     name: 'Level 1: Foundation',
     description: 'Build basic strength and establish workout habits',
-    requiredDaysToComplete: 12,
+    requiredDaysToComplete: 4, // Fixed: Should match the number of actual workout days
     workoutDays: [
       {
         id: 'level1_day1',
@@ -189,7 +189,7 @@ export const WORKOUT_LEVELS: Level[] = [
     id: 2,
     name: 'Level 2: Strength Builder',
     description: 'Increase intensity and add more challenging exercises',
-    requiredDaysToComplete: 16,
+    requiredDaysToComplete: 4, // Fixed: Should match the number of actual workout days
     workoutDays: [
       {
         id: 'level2_day1',
@@ -241,7 +241,7 @@ export const WORKOUT_LEVELS: Level[] = [
     id: 3,
     name: 'Level 3: Elite Performance',
     description: 'Advanced movements and high-intensity training',
-    requiredDaysToComplete: 20,
+    requiredDaysToComplete: 5, // Fixed: Should match the number of actual workout days
     workoutDays: [
       {
         id: 'level3_day1',

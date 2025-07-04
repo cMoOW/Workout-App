@@ -3,7 +3,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { WorkoutProgressProvider } from './context/WorkoutProgressContext';
 
 export {
   ErrorBoundary,
@@ -36,15 +36,17 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="workout" 
-        options={{ 
-          headerShown: false,
-          presentation: 'card' 
-        }} 
-      />
-    </Stack>
+    <WorkoutProgressProvider>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="workout" 
+          options={{ 
+            headerShown: false,
+            presentation: 'card' 
+          }} 
+        />
+      </Stack>
+    </WorkoutProgressProvider>
   );
 }

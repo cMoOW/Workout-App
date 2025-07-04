@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProgressCircle } from '../components/ProgressCircle';
 import { colors } from '../constants/colors';
 import { WORKOUT_LEVELS } from '../constants/workouts';
-import { useWorkoutProgress } from '../hooks/useWorkoutProgress';
+import { useWorkoutProgressContext } from '../context/WorkoutProgressContext';
 import { 
   calculateLevelProgress, 
   calculateOverallProgress,
@@ -13,7 +13,12 @@ import {
 } from '../utils/workoutCalculations';
 
 export default function ProgressScreen() {
-  const { userProgress, loading } = useWorkoutProgress();
+  const { userProgress, loading } = useWorkoutProgressContext();
+
+  // Debug: Log when userProgress changes
+  useEffect(() => {
+    console.log('Progress screen - userProgress updated:', userProgress);
+  }, [userProgress]);
 
   if (loading) {
     return (

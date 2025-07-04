@@ -44,13 +44,16 @@ export function useWorkoutProgress() {
         newStreak = 1;
       }
 
-      return {
+      const updatedProgress = {
         ...prev,
         completedWorkouts: newCompletedWorkouts,
         totalWorkoutsCompleted: prev.totalWorkoutsCompleted + 1,
         currentStreak: newStreak,
         longestStreak: Math.max(prev.longestStreak, newStreak)
       };
+
+      console.log('Updated progress:', updatedProgress);
+      return updatedProgress;
     });
   }, [setUserProgress]);
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -14,12 +14,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileImagePicker } from '../components/ProfileImagePicker';
 import { colors } from '../constants/colors';
 import { useAsyncStorage } from '../hooks/useAsyncStorage';
-import { useWorkoutProgress } from '../hooks/useWorkoutProgress';
+import { useWorkoutProgressContext } from '../context/WorkoutProgressContext';
 import { DEFAULT_USER_PROFILE } from '../constants/workouts';
 import { UserProfile } from '../types';
 
 export default function ProfileScreen() {
-  const { userProgress, resetProgress } = useWorkoutProgress();
+  const { userProgress, resetProgress } = useWorkoutProgressContext();
   const { value: userProfile, setValue: setUserProfile } = useAsyncStorage<UserProfile>(
     'userProfile', 
     DEFAULT_USER_PROFILE
@@ -29,6 +29,11 @@ export default function ProfileScreen() {
   const [editedName, setEditedName] = useState(userProfile.name);
   const [editedEmail, setEditedEmail] = useState(userProfile.email || '');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  // Debug: Log when userProgress changes
+  useEffect(() => {
+    console.log('Profile screen - userProgress updated:', userProgress);
+  }, [userProgress]);
 
   const handleSaveProfile = async () => {
     if (editedName.trim() === '') {
@@ -53,10 +58,18 @@ export default function ProfileScreen() {
   };
 
   const handleImageSelected = async (imageUri: string) => {
-    await setUserProfile(prev => ({
-      ...prev,
-      profileImage: imageUri,
-    }));
+    console.log('Profile screen - handleImageSelected called with:', imageUri);
+    try {
+      await setUserProfile(prev => ({
+        ...prev,
+        profileImage: imageUri,
+      }));
+      console.log('Profile image updated successfully');
+      Alert.alert('Success', 'Profile picture updated!');
+    } catch (error) {
+      console.error('Error updating profile image:', error);
+      Alert.alert('Error', 'Failed to update profile picture. Please try again.');
+    }
   };
 
   const handleResetProgress = () => {
@@ -114,10 +127,11 @@ export default function ProfileScreen() {
         {/* Profile Section */}
         <View style={styles.section}>
           <View style={styles.profileSection}>
+            <Text style={styles.sectionTitle}>Profile Photo</Text>
             <ProfileImagePicker
               currentImage={userProfile.profileImage}
               onImageSelected={handleImageSelected}
-              size={100}
+              size={120}
             />
             
             <View style={styles.profileInfo}>

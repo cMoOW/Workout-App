@@ -7,18 +7,25 @@ interface WorkoutItemProps {
   exercise: WorkoutExercise;
   isCompleted: boolean;
   onToggle: () => void;
+  disabled?: boolean;
 }
 
 export const WorkoutItem: React.FC<WorkoutItemProps> = ({
   exercise,
   isCompleted,
-  onToggle
+  onToggle,
+  disabled = false
 }) => {
   return (
     <TouchableOpacity
-      style={[styles.container, isCompleted && styles.completedContainer]}
-      onPress={onToggle}
-      activeOpacity={0.7}
+      style={[
+        styles.container, 
+        isCompleted && styles.completedContainer,
+        disabled && styles.disabledContainer
+      ]}
+      onPress={disabled ? undefined : onToggle}
+      activeOpacity={disabled ? 1 : 0.7}
+      disabled={disabled}
     >
       <View style={styles.content}>
         <View style={styles.header}>
@@ -68,6 +75,11 @@ const styles = StyleSheet.create({
   completedContainer: {
     backgroundColor: colors.success + '10',
     borderColor: colors.success + '30',
+  },
+  disabledContainer: {
+    backgroundColor: colors.gray100,
+    borderColor: colors.gray200,
+    opacity: 0.8,
   },
   content: {
     flex: 1,
