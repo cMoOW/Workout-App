@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProgressCircle } from './ProgressCircle';
 import { colors } from '../constants/colors';
+import { getLevelGradientColors, getLevelColor } from '../utils/colorUtils';
 import { Level } from '../types';
 
 interface LevelCardProps {
@@ -18,23 +19,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({
   isLocked,
   onPress
 }) => {
-  const getLevelColor = (levelId: number) => {
-    switch (levelId) {
-      case 1: return colors.gradients.level1;
-      case 2: return colors.gradients.level2;
-      case 3: return colors.gradients.level3;
-      default: return colors.gradients.primary;
-    }
-  };
-
-  const getProgressColor = (levelId: number) => {
-    switch (levelId) {
-      case 1: return colors.level1;
-      case 2: return colors.level2;
-      case 3: return colors.level3;
-      default: return colors.primary;
-    }
-  };
+  // Removed duplicate color functions - now using centralized utilities
 
   return (
     <TouchableOpacity
@@ -44,7 +29,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({
       activeOpacity={0.8}
     >
       <LinearGradient
-        colors={isLocked ? [colors.gray300, colors.gray400] : getLevelColor(level.id)}
+        colors={isLocked ? [colors.gray300, colors.gray400] : getLevelGradientColors(level.id)}
         style={styles.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -62,7 +47,7 @@ export const LevelCard: React.FC<LevelCardProps> = ({
             <ProgressCircle
               progress={isLocked ? 0 : progress}
               size={50}
-              color={isLocked ? colors.gray500 : getProgressColor(level.id)}
+              color={isLocked ? colors.gray500 : getLevelColor(level.id)}
               backgroundColor={colors.white + '30'}
             />
           </View>

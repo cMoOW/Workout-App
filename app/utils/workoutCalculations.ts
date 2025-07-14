@@ -1,4 +1,5 @@
 import { UserProgress, Level } from '../types';
+import { UI_CONSTANTS, WORKOUT_CONSTANTS } from '../constants/app';
 
 export const calculateLevelProgress = (
   userProgress: UserProgress,
@@ -11,14 +12,12 @@ export const calculateLevelProgress = (
   // Count unique workout days completed for this level
   const uniqueCompletedDays = new Set(completedWorkoutsForLevel.map(workout => workout.dayId)).size;
   
-  const progress = Math.min((uniqueCompletedDays / level.requiredDaysToComplete) * 100, 100);
+  const progress = Math.min(
+    (uniqueCompletedDays / level.requiredDaysToComplete) * WORKOUT_CONSTANTS.MAX_PROGRESS_PERCENTAGE, 
+    WORKOUT_CONSTANTS.MAX_PROGRESS_PERCENTAGE
+  );
   
-  console.log(`Level ${level.id} progress:`, {
-    completedWorkouts: completedWorkoutsForLevel.length,
-    uniqueCompletedDays,
-    requiredDays: level.requiredDaysToComplete,
-    progress
-  });
+  // Progress calculation completed - logging removed for production
   
   return progress;
 };
@@ -31,7 +30,10 @@ export const calculateOverallProgress = (
     (sum, level) => sum + level.requiredDaysToComplete, 0
   );
   
-  return Math.min((userProgress.totalWorkoutsCompleted / totalRequiredWorkouts) * 100, 100);
+  return Math.min(
+    (userProgress.totalWorkoutsCompleted / totalRequiredWorkouts) * WORKOUT_CONSTANTS.MAX_PROGRESS_PERCENTAGE, 
+    WORKOUT_CONSTANTS.MAX_PROGRESS_PERCENTAGE
+  );
 };
 
 export const isLevelUnlocked = (levelId: number, userProgress: UserProgress, allLevels: Level[]): boolean => {
@@ -41,14 +43,9 @@ export const isLevelUnlocked = (levelId: number, userProgress: UserProgress, all
   if (!previousLevel) return false;
   
   const previousLevelProgress = calculateLevelProgress(userProgress, previousLevel);
-  console.log(`Level ${levelId} unlock check:`, {
-    previousLevelId: previousLevel.id,
-    previousLevelProgress,
-    required: 80,
-    unlocked: previousLevelProgress >= 80
-  });
+  // Level unlock check completed
   
-  return previousLevelProgress >= 80; // Need 80% completion to unlock next level
+  return previousLevelProgress >= UI_CONSTANTS.LEVEL_UNLOCK_THRESHOLD;
 };
 
 export const getNextWorkoutForLevel = (levelId: number, userProgress: UserProgress, level: Level) => {
@@ -59,28 +56,23 @@ export const getNextWorkoutForLevel = (levelId: number, userProgress: UserProgre
   // Get unique completed workout day IDs 
   const completedDayIds = new Set(completedWorkoutsForLevel.map(workout => workout.dayId));
   
-  console.log(`Level ${levelId} completed day IDs:`, Array.from(completedDayIds));
-  console.log(`Total available workout days:`, level.workoutDays.length);
-  
   // Find the first workout day that hasn't been completed
   const nextUncompletedWorkout = level.workoutDays.find(day => !completedDayIds.has(day.id));
   
   if (nextUncompletedWorkout) {
-    console.log(`Next uncompleted workout: ${nextUncompletedWorkout.name}`);
     return nextUncompletedWorkout;
   }
   
   // If all workouts are completed, show the first one (it will be marked as completed)
-  console.log(`All workouts completed for level ${levelId}, showing first workout as completed`);
   return level.workoutDays[0];
 };
 
 export const formatDuration = (minutes: number): string => {
-  if (minutes < 60) {
+  if (minutes < WORKOUT_CONSTANTS.MINUTES_PER_HOUR) {
     return `${minutes}min`;
   }
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
+  const hours = Math.floor(minutes / WORKOUT_CONSTANTS.MINUTES_PER_HOUR);
+  const remainingMinutes = minutes % WORKOUT_CONSTANTS.MINUTES_PER_HOUR;
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
 };
 

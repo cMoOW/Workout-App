@@ -16,6 +16,8 @@ import { colors } from './constants/colors';
 import { WORKOUT_LEVELS } from './constants/workouts';
 import { useWorkoutProgressContext } from './context/WorkoutProgressContext';
 import { getNextWorkoutForLevel, formatDuration } from './utils/workoutCalculations';
+import { getLevelGradientColors } from './utils/colorUtils';
+import { logger } from './utils/logger';
 
 export default function WorkoutScreen() {
   const router = useRouter();
@@ -38,7 +40,7 @@ export default function WorkoutScreen() {
 
   const nextWorkout = getNextWorkoutForLevel(currentLevelId, userProgress, currentLevel);
   
-  console.log('Workout screen data:', {
+  logger.workout('Loading workout screen', {
     currentLevelId,
     currentLevel: currentLevel?.name,
     nextWorkout: nextWorkout?.name,
@@ -62,43 +64,46 @@ export default function WorkoutScreen() {
         .filter(ex => ex.completed)
         .map(ex => ex.exerciseId);
       setCompletedExercises(previouslyCompletedExercises);
-      console.log('Loaded previously completed exercises:', previouslyCompletedExercises);
+      logger.workout('Loaded previously completed exercises', { count: previouslyCompletedExercises.length });
     }
   }, [currentLevelId, nextWorkout.id, userProgress.completedWorkouts]);
 
   const handleExerciseToggle = (exerciseId: string) => {
-    console.log('Exercise toggle called for:', exerciseId);
+    logger.workout('Exercise toggle attempted', { exerciseId });
     
     // Prevent toggling if workout is already completed
     if (isWorkoutAlreadyCompleted) {
-      console.log('Workout already completed - preventing toggle');
+      logger.warn('Attempted to toggle completed workout');
       Alert.alert('Workout Completed', 'This workout has already been completed. You cannot modify it.');
       return;
     }
     
     if (!isWorkoutStarted) {
-      console.log('Starting workout for the first time');
+      logger.workout('Starting new workout session');
       setIsWorkoutStarted(true);
       setWorkoutStartTime(new Date());
     }
 
     setCompletedExercises(prev => {
-      let newState;
-      if (prev.includes(exerciseId)) {
-        newState = prev.filter(id => id !== exerciseId);
-        console.log('Removing exercise from completed list:', exerciseId);
-      } else {
-        newState = [...prev, exerciseId];
-        console.log('Adding exercise to completed list:', exerciseId);
-      }
-      console.log('New completed exercises state:', newState);
+      const wasCompleted = prev.includes(exerciseId);
+      const newState = wasCompleted 
+        ? prev.filter(id => id !== exerciseId)
+        : [...prev, exerciseId];
+      
+      logger.workout(`Exercise ${wasCompleted ? 'unchecked' : 'completed'}`, { 
+        exerciseId, 
+        totalCompleted: newState.length 
+      });
+      
       return newState;
     });
   };
 
   const handleCompleteWorkout = async () => {
-    console.log('handleCompleteWorkout called - Starting workout completion process');
-    console.log('Completed exercises:', completedExercises);
+    logger.workout('Starting workout completion process', { 
+      completedExercises: completedExercises.length,
+      totalExercises: nextWorkout.exercises.length 
+    });
     
     // Prevent completing if already completed
     if (isWorkoutAlreadyCompleted) {
@@ -107,41 +112,30 @@ export default function WorkoutScreen() {
     }
     
     if (completedExercises.length === 0) {
-      console.log('No exercises completed - showing alert');
+      logger.warn('Attempted to complete workout with no exercises');
       Alert.alert('No exercises completed', 'Please complete at least one exercise before finishing.');
       return;
     }
 
     const completionPercentage = (completedExercises.length / nextWorkout.exercises.length) * 100;
-    console.log('Completion percentage:', completionPercentage);
-    
-    // For web compatibility, let's proceed directly without confirmation alert
-    console.log('Proceeding with workout completion...');
-    console.log('Completing workout:', { levelId: currentLevelId, dayId: nextWorkout.id, exercises: completedExercises });
+    logger.workout('Workout completion statistics', { 
+      completionPercentage: Math.round(completionPercentage),
+      levelId: currentLevelId,
+      dayId: nextWorkout.id 
+    });
     
     try {
-      console.log('About to call completeWorkout function...');
       await completeWorkout(currentLevelId, nextWorkout.id, completedExercises);
-      console.log('Workout completed successfully - context updated');
-      
-      // Navigate directly without success alert for now
-      console.log('Navigating to home screen directly...');
+      logger.workout('Workout completed successfully, navigating to home');
       router.push('/(tabs)');
       
     } catch (error) {
-      console.error('Error completing workout:', error);
+      logger.error('Failed to complete workout', error);
       Alert.alert('Error', 'There was an error saving your workout. Please try again.');
     }
   };
 
-  const getLevelColor = (levelId: number) => {
-    switch (levelId) {
-      case 1: return colors.gradients.level1;
-      case 2: return colors.gradients.level2;
-      case 3: return colors.gradients.level3;
-      default: return colors.gradients.primary;
-    }
-  };
+  // Removed duplicate getLevelColor function - now using centralized utility
 
   const getWorkoutDuration = () => {
     if (!workoutStartTime) return '0min';
@@ -155,7 +149,7 @@ export default function WorkoutScreen() {
       <StatusBar barStyle="light-content" />
       
       <LinearGradient
-        colors={getLevelColor(currentLevelId)}
+        colors={getLevelGradientColors(currentLevelId)}
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
