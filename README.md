@@ -86,6 +86,16 @@ A comprehensive fitness tracking app built with React Native and Expo, featuring
    npm install
    ```
 
+4. **Set up environment variables**
+   
+   Create a `.env` file in the `backend` directory:
+   ```env
+   MONGODB_URI=mongodb://localhost:27017/levelup_fitness
+   JWT_SECRET=your-super-secret-jwt-key-here
+   PORT=3000
+   NODE_ENV=development
+   ```
+
 5. **Start the backend server**
    ```bash
    cd backend
